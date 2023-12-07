@@ -101,6 +101,138 @@ public class ModelSearchPanel implements ISearchPanel {
     @objid ("7c80a2ea-df62-4629-9fe0-48077daeabac")
     private SmMetamodel metamodel;
 
+    private void setupNamePatternField() {
+        final Label nameLabel = new Label(this.topGroup, SWT.NONE);
+        nameLabel.setText(CoreUi.I18N.getString("ModelSearch.NamePattern.label")); //$NON-NLS-1$
+        this.textfield = new Text(this.topGroup, SWT.SINGLE | SWT.BORDER);
+
+        gridData = new GridData(SWT.FILL, SWT.TOP, true, false);
+        this.textfield.setLayoutData(gridData);
+
+        this.textfield.setToolTipText(CoreUi.I18N.getString("ModelSearch.NamePattern.tooltip"));
+    }
+
+    private void setupNamePatternFieldEventListeners() {
+        // Prevent CR from going to the default button
+        this.textfield.addTraverseListener(new TraverseListener() {
+            @Override
+            public void keyTraversed(TraverseEvent e) {
+                if (e.detail == SWT.TRAVERSE_RETURN) {
+                    e.doit = false;
+                    e.detail = SWT.TRAVERSE_NONE;
+                }
+            }
+        });
+
+        this.textfield.addModifyListener(new ModifyListener() {
+            @Override
+            public void modifyText(ModifyEvent e) {
+                final Text text = (Text) e.getSource();
+                if (ModelSearchCriteria.isValidExpression(text.getText())) {
+                    text.setForeground(text.getDisplay().getSystemColor(SWT.COLOR_LIST_FOREGROUND));
+                } else {
+                    text.setForeground(text.getDisplay().getSystemColor(SWT.COLOR_RED));
+                }
+            }
+        });
+
+        this.textfield.addKeyListener(new KeyListener() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR) {
+                    ModelSearchPanel.this.searchController.runSearch();
+                }
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                // do nothing
+            }
+        });
+    }
+
+    private void setupDefaultValuesForSearchCriteria() {
+        final ModelSearchCriteria defaultCriteria = new ModelSearchCriteria();
+        defaultCriteria.setExpression(".*");
+        defaultCriteria.setStereotype("");
+        defaultCriteria.setIncludeRamc(false);
+
+        for (String smcName : ModelSearchPanel.DEFAULT_SEARCH_METACLASSES) {
+            SmClass mc = metamodel.getMClass(smcName);
+            if (mc != null)
+                defaultCriteria.addMetaclass(mc);
+        }
+        setCriteria(defaultCriteria);
+    }
+
+    private void setupCaseSensitiveCheckbox() {
+        this.caseSensitiveCheckBox = new Button(this.topGroup, SWT.CHECK);
+        this.caseSensitiveCheckBox.setText("");
+        this.caseSensitiveCheckBox.setToolTipText(CoreUi.I18N.getString("ModelSearch.NameCase.tooltip"));
+        gridData = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
+        this.caseSensitiveCheckBox.setLayoutData(gridData);
+
+    }
+
+    private void setupCaseSensitiveCheckboxEventListeners() {
+        this.caseSensitiveCheckBox.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent e) {
+                // TODO Auto-generated method stub
+                super.widgetSelected(e);
+                ModelSearchPanel.this.searchController.runSearch();
+            }
+        });
+    }
+
+    private void setupMetaclassSelector() {
+        final Label metaclassLabel = new Label(this.topGroup, SWT.NONE);
+        metaclassLabel.setText(CoreUi.I18N.getString("ModelSearch.MetaclassSelector.label")); //$NON-NLS-1$
+
+        this.metaclassSelector = new MultipleMetaclassSelector(this.topGroup, SWT.BORDER, this.metamodel);
+        gridData = new GridData(SWT.FILL, SWT.FILL, true, false);
+        this.metaclassSelector.getControl().setLayoutData(gridData);
+        this.metaclassSelector.addListener(new IMultipleMetaclassSelectorListener() {
+            @Override
+            public void selectMetaclasses(List<MClass> mClasses) {
+                ModelSearchPanel.this.searchController.runSearch();
+            }
+        });
+        new Label(this.topGroup, SWT.NONE).setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+    }
+
+    private void setupStereotypeCriteria() {
+        final Label stereotypeLabel = new Label(this.topGroup, SWT.NONE);
+        stereotypeLabel.setText(CoreUi.I18N.getString("ModelSearch.Stereotype.label")); //$NON-NLS-1$
+
+        this.stereotypeText = new Text(this.topGroup, SWT.SINGLE | SWT.BORDER);
+        gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+        this.stereotypeText.setLayoutData(gridData);
+        this.stereotypeText.setToolTipText(CoreUi.I18N.getString("ModelSearch.Stereotype.tooltip"));
+
+        new Label(this.topGroup, SWT.NONE).setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+    }
+
+    private void setupIncludeRamcOption() {
+        final Label includeRamcLabel = new Label(this.topGroup, SWT.NONE);
+        includeRamcLabel.setText(CoreUi.I18N.getString("ModelSearch.IncludeRamc.label")); //$NON-NLS-1$
+
+        this.includeRamcCheckBox = new Button(this.topGroup, SWT.CHECK);
+        this.includeRamcCheckBox.setToolTipText(CoreUi.I18N.getString("ModelSearch.IncludeRamc.tooltip")); //$NON-NLS-1$
+        gridData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+        this.includeRamcCheckBox.setLayoutData(gridData);
+
+        new Label(this.topGroup, SWT.NONE).setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
+        this.includeRamcCheckBox.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent e) {
+                super.widgetSelected(e);
+                ModelSearchPanel.this.searchController.runSearch();
+            }
+        });
+    }
+
     @objid ("adea39e7-a628-4e28-86df-a75b20afd176")
     @Override
     public void initialize(Composite parent, ICoreSession session, ISearchController theSearchController) {
@@ -119,124 +251,26 @@ public class ModelSearchPanel implements ISearchPanel {
         this.topGroup.setLayout(gridLayout);
         
         // The name pattern field and its label
-        final Label nameLabel = new Label(this.topGroup, SWT.NONE);
-        nameLabel.setText(CoreUi.I18N.getString("ModelSearch.NamePattern.label")); //$NON-NLS-1$
-        this.textfield = new Text(this.topGroup, SWT.SINGLE | SWT.BORDER);
+        setupNamePatternField();
+
+        // name patern field's event listeners
+        setupNamePatternFieldEventListeners();
         
-        gridData = new GridData(SWT.FILL, SWT.TOP, true, false);
-        this.textfield.setLayoutData(gridData);
-        
-        this.textfield.setToolTipText(CoreUi.I18N.getString("ModelSearch.NamePattern.tooltip"));
-        // Prevent CR from going to the default button
-        this.textfield.addTraverseListener(new TraverseListener() {
-            @Override
-            public void keyTraversed(TraverseEvent e) {
-                if (e.detail == SWT.TRAVERSE_RETURN) {
-                    e.doit = false;
-                    e.detail = SWT.TRAVERSE_NONE;
-                }
-            }
-        });
-        
-        this.textfield.addModifyListener(new ModifyListener() {
-            @Override
-            public void modifyText(ModifyEvent e) {
-                final Text text = (Text) e.getSource();
-                if (ModelSearchCriteria.isValidExpression(text.getText())) {
-                    text.setForeground(text.getDisplay().getSystemColor(SWT.COLOR_LIST_FOREGROUND));
-                } else {
-                    text.setForeground(text.getDisplay().getSystemColor(SWT.COLOR_RED));
-                }
-            }
-        });
-        
-        this.textfield.addKeyListener(new KeyListener() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                if (e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR) {
-                    ModelSearchPanel.this.searchController.runSearch();
-                }
-            }
-        
-            @Override
-            public void keyPressed(KeyEvent e) {
-                // do nothing
-            }
-        });
-        
-        this.caseSensitiveCheckBox = new Button(this.topGroup, SWT.CHECK);
-        this.caseSensitiveCheckBox.setText("");
-        this.caseSensitiveCheckBox.setToolTipText(CoreUi.I18N.getString("ModelSearch.NameCase.tooltip"));
-        gridData = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
-        this.caseSensitiveCheckBox.setLayoutData(gridData);
-        
-        this.caseSensitiveCheckBox.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                // TODO Auto-generated method stub
-                super.widgetSelected(e);
-                ModelSearchPanel.this.searchController.runSearch();
-            }
-        });
+       // case sensitive checkbox
+        setupCaseSensitiveCheckbox();
+        setupCaseSensitiveCheckboxEventListeners();
         
         // The metaclass selector
-        final Label metaclassLabel = new Label(this.topGroup, SWT.NONE);
-        metaclassLabel.setText(CoreUi.I18N.getString("ModelSearch.MetaclassSelector.label")); //$NON-NLS-1$
-        
-        this.metaclassSelector = new MultipleMetaclassSelector(this.topGroup, SWT.BORDER, this.metamodel);
-        gridData = new GridData(SWT.FILL, SWT.FILL, true, false);
-        this.metaclassSelector.getControl().setLayoutData(gridData);
-        this.metaclassSelector.addListener(new IMultipleMetaclassSelectorListener() {
-            @Override
-            public void selectMetaclasses(List<MClass> mClasses) {
-                ModelSearchPanel.this.searchController.runSearch();
-            }
-        });
-        new Label(this.topGroup, SWT.NONE).setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-        
+        setupMetaclassSelector();
+
         // The 'stereotype' criterion
-        final Label stereotypeLabel = new Label(this.topGroup, SWT.NONE);
-        stereotypeLabel.setText(CoreUi.I18N.getString("ModelSearch.Stereotype.label")); //$NON-NLS-1$
-        
-        this.stereotypeText = new Text(this.topGroup, SWT.SINGLE | SWT.BORDER);
-        gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
-        this.stereotypeText.setLayoutData(gridData);
-        this.stereotypeText.setToolTipText(CoreUi.I18N.getString("ModelSearch.Stereotype.tooltip"));
-        
-        new Label(this.topGroup, SWT.NONE).setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-        
+        setupStereotypeCriteria();
+
         // The 'include ramc' option
-        final Label includeRamcLabel = new Label(this.topGroup, SWT.NONE);
-        includeRamcLabel.setText(CoreUi.I18N.getString("ModelSearch.IncludeRamc.label")); //$NON-NLS-1$
-        
-        this.includeRamcCheckBox = new Button(this.topGroup, SWT.CHECK);
-        this.includeRamcCheckBox.setToolTipText(CoreUi.I18N.getString("ModelSearch.IncludeRamc.tooltip")); //$NON-NLS-1$
-        gridData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
-        this.includeRamcCheckBox.setLayoutData(gridData);
-        
-        new Label(this.topGroup, SWT.NONE).setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-        
-        this.includeRamcCheckBox.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                super.widgetSelected(e);
-                ModelSearchPanel.this.searchController.runSearch();
-            }
-        });
+        setupIncludeRamcOption();
         
         // Setup default values for criteria
-        final ModelSearchCriteria defaultCriteria = new ModelSearchCriteria();
-        defaultCriteria.setExpression(".*");
-        defaultCriteria.setStereotype("");
-        defaultCriteria.setIncludeRamc(false);
-        
-        for (String smcName : ModelSearchPanel.DEFAULT_SEARCH_METACLASSES) {
-            SmClass mc = metamodel.getMClass(smcName);
-            if (mc != null)
-                defaultCriteria.addMetaclass(mc);
-        }
-        setCriteria(defaultCriteria);
-        
+        setupDefaultValuesForSearchCriteria();
     }
 
     @objid ("2085432e-37ae-4207-ba2c-b183395a0477")
